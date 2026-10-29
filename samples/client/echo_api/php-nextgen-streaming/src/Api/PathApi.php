@@ -31,6 +31,7 @@ use InvalidArgumentException;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -180,15 +181,14 @@ class PathApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                $eResponse = $this->getExceptionResponse($e);
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $eResponse?->getHeaders(),
-                    $eResponse ? (string) $eResponse->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (NetworkExceptionInterface $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -317,8 +317,7 @@ class PathApi
                     ];
                 },
                 function ($exception) {
-                    $response = $this->getExceptionResponse($exception);
-                    if ($response === null) {
+                    if (!$exception instanceof ResponseException) {
                         throw new ApiException(
                             "[{$exception->getCode()}] {$exception->getMessage()}",
                             (int) $exception->getCode(),
@@ -326,6 +325,7 @@ class PathApi
                             null
                         );
                     }
+                    $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
                         sprintf(
@@ -473,17 +473,6 @@ class PathApi
         }
 
         return $options;
-    }
-
-    /**
-     * Returns the response attached to a Guzzle exception, if there is one.
-     *
-     * Guzzle 7 exposes getResponse() on RequestException, while Guzzle 8 only
-     * exposes it on ResponseException and its subclasses.
-     */
-    private function getExceptionResponse(\Throwable $exception): ?ResponseInterface
-    {
-        return method_exists($exception, 'getResponse') ? $exception->getResponse() : null;
     }
 
     private function handleResponseWithDataType(

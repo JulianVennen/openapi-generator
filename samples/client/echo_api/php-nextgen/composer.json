@@ -22,8 +22,8 @@
         "ext-curl": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "guzzlehttp/guzzle": "^7.4.5 || ^8.0",
-        "guzzlehttp/psr7": "^2.0 || ^3.0",
+        "guzzlehttp/guzzle": "^8.0",
+        "guzzlehttp/psr7": "^3.0",
         "psr/http-client": "^1.0"
     },
     "require-dev": {
