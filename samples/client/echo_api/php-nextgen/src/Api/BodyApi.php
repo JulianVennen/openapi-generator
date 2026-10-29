@@ -30,12 +30,13 @@ namespace OpenAPI\Client\Api;
 use InvalidArgumentException;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ResponseException;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
 use GuzzleHttp\Promise\PromiseInterface;
+use Psr\Http\Client\NetworkExceptionInterface;
 use OpenAPI\Client\ApiException;
 use OpenAPI\Client\Configuration;
 use OpenAPI\Client\HeaderSelector;
@@ -190,14 +191,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -353,6 +354,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -418,7 +427,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -491,14 +504,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -658,6 +671,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -712,7 +733,11 @@ class BodyApi
         if (isset($body)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($body));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($body), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $body;
             }
@@ -733,7 +758,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -806,14 +835,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -973,6 +1002,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -1059,7 +1096,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -1132,14 +1173,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -1299,6 +1340,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -1379,7 +1428,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -1452,14 +1505,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -1619,6 +1672,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -1673,7 +1734,11 @@ class BodyApi
         if (isset($pet)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($pet));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($pet), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $pet;
             }
@@ -1694,7 +1759,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -1767,14 +1836,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -1934,6 +2003,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -1988,7 +2065,11 @@ class BodyApi
         if (isset($body)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($body));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($body), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $body;
             }
@@ -2009,7 +2090,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -2082,14 +2167,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -2249,6 +2334,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -2303,7 +2396,11 @@ class BodyApi
         if (isset($pet)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($pet));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($pet), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $pet;
             }
@@ -2324,7 +2421,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -2397,14 +2498,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -2564,6 +2665,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -2618,7 +2727,11 @@ class BodyApi
         if (isset($pet)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($pet));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($pet), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $pet;
             }
@@ -2639,7 +2752,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -2712,14 +2829,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -2879,6 +2996,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -2933,7 +3058,11 @@ class BodyApi
         if (isset($body)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($body));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($body), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $body;
             }
@@ -2954,7 +3083,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
@@ -3027,14 +3160,14 @@ class BodyApi
             $options = $this->createHttpClientOption();
             try {
                 $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
+            } catch (ResponseException $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                    $e->getResponse()->getHeaders(),
+                    (string) $e->getResponse()->getBody()
                 );
-            } catch (ConnectException $e) {
+            } catch (RequestException|NetworkExceptionInterface $e) {
                 throw new ApiException(
                     "[{$e->getCode()}] {$e->getMessage()}",
                     (int) $e->getCode(),
@@ -3194,6 +3327,14 @@ class BodyApi
                     ];
                 },
                 function ($exception) {
+                    if (!$exception instanceof ResponseException) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
                     $response = $exception->getResponse();
                     $statusCode = $response->getStatusCode();
                     throw new ApiException(
@@ -3248,7 +3389,11 @@ class BodyApi
         if (isset($tag)) {
             if (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the body
-                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($tag));
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($tag), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 $httpBody = $tag;
             }
@@ -3269,7 +3414,11 @@ class BodyApi
 
             } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
                 # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
             } else {
                 // for HTTP post (form)
                 $httpBody = ObjectSerializer::buildQuery($formParams);
